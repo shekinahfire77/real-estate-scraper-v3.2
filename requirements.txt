@@ -1,0 +1,19 @@
+# Real Estate Scraper Dependencies
+# Install with: pip install -r requirements.txt
+
+# Core scraping libraries
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+lxml>=5.1.0
+
+# Optional: For JavaScript-rendered pages
+# Uncomment to enable Playwright support
+# playwright>=1.40.0
+
+# Optional: For data analysis
+# pandas>=2.1.0
+# numpy>=1.24.0
+
+# Optional: For export to other formats
+# pyarrow>=14.0.0  # For Parquet export
+# openpyxl>=3.1.0  # For Excel export
