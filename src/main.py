@@ -333,22 +333,22 @@ def main():
                        help='Output CSV file for results')
     parser.add_argument('--limit', type=int, default=None,
                        help='Limit number of URLs to process')
-    parser.add_argument('--async', action='store_true', default=True,
+    parser.add_argument('--async', dest='use_async', action='store_true', default=True,
                        help='Use async scraping (default: True)')
-    parser.add_argument('--sync', dest='async', action='store_false',
+    parser.add_argument('--sync', dest='use_async', action='store_false',
                        help='Use synchronous scraping')
     parser.add_argument('--concurrent', type=int, default=5,
                        help='Max concurrent requests for async mode')
     parser.add_argument('--threshold', type=int, default=50,
                        help='Minimum quality score threshold')
-    
+
     args = parser.parse_args()
-    
+
     # Create scraper instance
     scraper = RealEstateScraperV3(
         input_csv=args.input,
         output_csv=args.output,
-        use_async=args.async,
+        use_async=args.use_async,
         concurrent_limit=args.concurrent,
         quality_threshold=args.threshold
     )

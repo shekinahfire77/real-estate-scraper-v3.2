@@ -5,7 +5,7 @@ import logging
 from pathlib import Path
 from typing import Dict, Any, Optional
 import yaml
-from pydantic import BaseSettings
+from pydantic_settings import BaseSettings
 from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)

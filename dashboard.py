@@ -486,10 +486,17 @@ app.index_string = '''<!DOCTYPE html>
                 border-radius: 10px;
                 box-shadow: 0 2px 10px rgba(0,0,0,0.1);
                 margin-bottom: 30px;
+                max-height: 600px;
+                overflow-y: auto;
             }
             .table-container h3 {
                 margin: 0 0 20px 0;
                 color: #333;
+                position: sticky;
+                top: 0;
+                background: white;
+                z-index: 10;
+                padding-bottom: 10px;
             }
         </style>
     </head>
@@ -508,7 +515,7 @@ if __name__ == '__main__':
     dashboard_config = config_manager.get('monitoring.dashboard', {})
     
     if dashboard_config.get('enabled', False):
-        app.run_server(
+        app.run(
             debug=True,
             host=dashboard_config.get('host', 'localhost'),
             port=dashboard_config.get('port', 8050)
