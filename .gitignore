@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+*.egg-info/
+
+# Scraper outputs
+*.csv
+*.log
+*.json
+*.html
+
+# Test files
+test_*.py
+*_test.py
+actual_listing_pages.csv
+one_listing_per_site.csv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Sensitive
+.env
+*.key
+*.pem
