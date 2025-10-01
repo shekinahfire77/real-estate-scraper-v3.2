@@ -487,7 +487,7 @@ def main():
                        help='Output CSV file for results')
     parser.add_argument('--limit', type=int, default=None,
                        help='Limit number of URLs to process')
-    parser.add_argument('--async', action='store_true', default=True,
+    parser.add_argument('--async', dest='use_async', action='store_true', default=True,
                        help='Use async scraping (default: True)')
     parser.add_argument('--sync', dest='use_async', action='store_false',
                        help='Use synchronous scraping')

@@ -17,7 +17,7 @@ class RedfinEnhancedExtractor:
         data = {'url': url}
 
         # Detect if rental or for sale
-        page_type = self._detect_page_type(html)
+        page_type = self._detect_page_type(html, url)
         data['page_type'] = page_type
 
         # Core fields
@@ -201,7 +201,7 @@ class RedfinEnhancedExtractor:
                     year = int(match.group())
                     if 1800 < year <= 2030:
                         return year
-                except:
+                except (ValueError, AttributeError):
                     pass
         return None
 
@@ -227,7 +227,7 @@ class RedfinEnhancedExtractor:
         if matches:
             try:
                 return int(matches[0][0])
-            except:
+            except (ValueError, IndexError):
                 pass
         return None
 
@@ -238,7 +238,7 @@ class RedfinEnhancedExtractor:
         if matches:
             try:
                 return float(matches[0][0].replace(',', ''))
-            except:
+            except (ValueError, IndexError):
                 pass
         return None
 
@@ -296,7 +296,7 @@ class RedfinEnhancedExtractor:
                 sqft_val = float(re.sub(r'[^\d.]', '', str(sqft)))
                 if sqft_val > 0:
                     return round(price_val / sqft_val, 2)
-            except:
+            except (ValueError, ZeroDivisionError):
                 pass
         return None
 
@@ -350,9 +350,10 @@ class RedfinEnhancedExtractor:
 
         return data
 
-    def _detect_page_type(self, html: str) -> str:
+    def _detect_page_type(self, html: str, url: str) -> str:
         """Detect if page is for rental or for sale"""
         html_lower = html.lower()
+        url_lower = url.lower()
         
         # Strong rental indicators
         rental_keywords = [
@@ -371,9 +372,9 @@ class RedfinEnhancedExtractor:
         sale_score = sum(1 for kw in sale_keywords if kw in html_lower)
         
         # Check URL for rent vs buy
-        if '/rent/' in html_lower:
+        if '/rent/' in url_lower:
             rental_score += 2
-        if '/buy/' in html_lower or '/home/' in html_lower:
+        if '/buy/' in url_lower or '/home/' in url_lower:
             sale_score += 2
         
         return 'rental' if rental_score > sale_score else 'for_sale'
@@ -385,7 +386,7 @@ class RedfinEnhancedExtractor:
         if matches:
             try:
                 return float(matches[0].replace(',', ''))
-            except:
+            except (ValueError, IndexError, AttributeError):
                 pass
         return None
 
