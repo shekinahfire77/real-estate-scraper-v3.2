@@ -8,6 +8,7 @@ lxml>=5.1.0
 
 # Data validation
 pydantic>=2.5.0
+pydantic-settings>=2.1.0
 
 # Async support
 aiohttp>=3.9.0
@@ -25,14 +26,35 @@ pytest-cov>=4.1.0
 faker>=20.0.0
 responses>=0.24.0  # For mocking HTTP requests
 
+# Data export formats
+pandas>=2.1.0
+openpyxl>=3.1.0  # Excel export
+pyarrow>=14.0.0  # Parquet export
+
+# Configuration
+pyyaml>=6.0.1
+python-dotenv>=1.0.0
+
+# CLI and monitoring
+click>=8.1.0  # CLI framework
+rich>=13.7.0  # Beautiful terminal output
+tabulate>=0.9.0  # Table formatting
+
+# Web dashboard (optional)
+flask>=3.0.0
+flask-cors>=4.0.0
+plotly>=5.18.0  # Interactive charts
+dash>=2.14.0  # Dashboard framework
+
+# Notifications (optional)
+# python-telegram-bot>=20.7  # Telegram notifications
+# sendgrid>=6.11.0  # Email notifications
+
 # Optional: For JavaScript-rendered pages
-# Uncomment to enable Playwright support
 # playwright>=1.40.0
 
-# Optional: For data analysis
-# pandas>=2.1.0
-# numpy>=1.24.0
-
-# Optional: For export to other formats
-# pyarrow>=14.0.0  # For Parquet export
-# openpyxl>=3.1.0  # For Excel export
+# Development tools
+ipython>=8.18.0
+black>=23.12.0  # Code formatting
+isort>=5.13.0  # Import sorting
+flake8>=7.0.0  # Linting

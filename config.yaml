@@ -1,0 +1,185 @@
+# Real Estate Scraper Configuration
+# This file contains default settings that can be overridden
+
+# Scraping settings
+scraping:
+  # Maximum concurrent requests
+  concurrent_limit: 5
+  
+  # Minimum quality score to accept
+  quality_threshold: 50
+  
+  # Request timeout in seconds
+  timeout: 30
+  
+  # Use async scraping
+  use_async: true
+  
+  # Retry settings
+  retry:
+    max_attempts: 3
+    base_delay: 1.0
+    max_delay: 60.0
+    
+  # Circuit breaker settings
+  circuit_breaker:
+    failure_threshold: 5
+    recovery_timeout: 60
+    block_duration_days: 7
+
+# Database settings
+database:
+  # Database type: sqlite or postgresql
+  type: sqlite
+  
+  # SQLite settings
+  sqlite:
+    path: data/real_estate.db
+    
+  # PostgreSQL settings (if type is postgresql)
+  postgresql:
+    host: localhost
+    port: 5432
+    user: postgres
+    password: postgres
+    database: real_estate
+    
+  # Connection pool settings
+  pool:
+    size: 10
+    max_overflow: 20
+    
+  # Auto-cleanup settings
+  cleanup:
+    # Remove failed URLs older than X days
+    failed_urls_retention_days: 30
+    # Remove old scrape results after X days
+    scrape_results_retention_days: 90
+
+# Export settings
+export:
+  # Default export format: csv, json, excel, parquet
+  default_format: csv
+  
+  # Export directory
+  output_dir: data/exports
+  
+  # Include metadata in exports
+  include_metadata: true
+  
+  # Compression for large exports
+  compress: true
+
+# Monitoring and alerts
+monitoring:
+  # Enable monitoring dashboard
+  dashboard:
+    enabled: true
+    port: 8050
+    host: localhost
+    
+  # Metrics to track
+  metrics:
+    - success_rate
+    - average_quality_score
+    - response_time
+    - price_changes
+    
+  # Alerts
+  alerts:
+    enabled: false
+    
+    # Alert thresholds
+    thresholds:
+      min_success_rate: 80  # Alert if success rate drops below 80%
+      max_response_time: 10  # Alert if avg response time > 10s
+      
+    # Alert channels
+    channels:
+      # Email alerts (requires sendgrid API key)
+      email:
+        enabled: false
+        from: scraper@example.com
+        to: admin@example.com
+        
+      # Telegram alerts (requires bot token)
+      telegram:
+        enabled: false
+        bot_token: YOUR_BOT_TOKEN
+        chat_id: YOUR_CHAT_ID
+        
+      # Webhook alerts
+      webhook:
+        enabled: false
+        url: https://your-webhook-url.com
+        
+# Change detection
+change_detection:
+  # Enable price change tracking
+  track_price_changes: true
+  
+  # Price drop threshold to trigger alert (percentage)
+  price_drop_threshold: 5
+  
+  # Track availability changes
+  track_availability: true
+  
+  # Fields to monitor for changes
+  monitored_fields:
+    - price
+    - availability_date
+    - status
+    
+# Logging settings
+logging:
+  # Log level: DEBUG, INFO, WARNING, ERROR
+  level: INFO
+  
+  # Log format
+  format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+  
+  # Log file settings
+  file:
+    enabled: true
+    path: logs/scraper.log
+    max_bytes: 10485760  # 10MB
+    backup_count: 5
+    
+  # Console logging
+  console:
+    enabled: true
+    colored: true  # Use colored output
+    
+# Site-specific settings
+sites:
+  redfin.com:
+    delay_range: [1, 2]
+    requests_per_minute: 30
+    max_concurrent: 5
+    selectors_version: v1
+    
+  zillow.com:
+    delay_range: [5, 10]
+    requests_per_minute: 6
+    max_concurrent: 1
+    selectors_version: v1
+    
+  realtor.com:
+    delay_range: [3, 6]
+    requests_per_minute: 12
+    max_concurrent: 2
+    selectors_version: v1
+
+# Development settings
+development:
+  # Enable debug mode
+  debug: false
+  
+  # Save HTML responses for debugging
+  save_html: false
+  
+  # Pretty print JSON outputs
+  pretty_json: true
+  
+  # Enable SQL echo
+  sql_echo: false
