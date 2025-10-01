@@ -13,6 +13,9 @@ venv/
 *.log
 *.json
 *.html
+*.db
+*.sqlite
+*.sqlite3
 
 # Test files
 test_*.py
