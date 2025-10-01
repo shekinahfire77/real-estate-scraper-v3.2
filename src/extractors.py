@@ -82,17 +82,19 @@ class DataExtractor:
     
     def clean_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Clean and normalize extracted data"""
-        
+
         # Clean price
         if data.get('price'):
-            price_str = data['price'].replace(',', '').replace('$', '')
+            price_str = str(data['price']).replace(',', '').replace('$', '')
             match = re.search(r'\d+\.?\d*', price_str)
             if match:
                 try:
                     data['price'] = float(match.group())
                 except ValueError:
-                    pass
-        
+                    data['price'] = None
+            else:
+                data['price'] = None
+
         # Clean bedrooms
         if data.get('bedrooms'):
             match = re.search(r'\d+', str(data['bedrooms']))
@@ -100,8 +102,10 @@ class DataExtractor:
                 try:
                     data['bedrooms'] = int(match.group())
                 except ValueError:
-                    pass
-        
+                    data['bedrooms'] = None
+            else:
+                data['bedrooms'] = None
+
         # Clean bathrooms
         if data.get('bathrooms'):
             match = re.search(r'\d+\.?\d*', str(data['bathrooms']))
@@ -109,8 +113,10 @@ class DataExtractor:
                 try:
                     data['bathrooms'] = float(match.group())
                 except ValueError:
-                    pass
-        
+                    data['bathrooms'] = None
+            else:
+                data['bathrooms'] = None
+
         # Clean square footage
         if data.get('square_footage'):
             sqft_str = str(data['square_footage']).replace(',', '')
@@ -119,8 +125,10 @@ class DataExtractor:
                 try:
                     data['square_footage'] = int(match.group())
                 except ValueError:
-                    pass
-        
+                    data['square_footage'] = None
+            else:
+                data['square_footage'] = None
+
         return data
     
     def extract_with_regex(self, text: str, patterns: List[str]) -> Optional[str]:

@@ -19,7 +19,7 @@ from .config import (
     QUALITY_THRESHOLDS
 )
 from .models import RealEstateProperty, ScrapingResult, QualityReport
-from .extractors import DataExtractor
+from .extractors_enhanced import RedfinEnhancedExtractor
 from .validators import DataValidator
 from .scrapers import BeautifulSoupScraper, AsyncScraper
 from .scrapers.retry_handler import (
@@ -146,17 +146,15 @@ class RealEstateScraperWithDB:
     @retry_with_backoff(max_attempts=3, base_delay=1.0)
     def process_url_with_retry(self, url: str, html: Optional[str]) -> Optional[Dict[str, Any]]:
         """Process URL with retry logic"""
-        
+
         if not html:
             raise Exception("No HTML content")
-        
-        # Extract data
-        domain = self.sync_scraper.get_domain(url)
-        extractor = DataExtractor(domain)
-        raw_data = extractor.extract_property_data(html)
-        
-        # Add URL to data
-        raw_data['url'] = url
+
+        # Extract data using enhanced extractor
+        extractor = RedfinEnhancedExtractor()
+        raw_data = extractor.extract_property_data(html, url)
+
+        # URL already added by enhanced extractor
         
         # Validate and score
         validated_data = self.validator.validate_and_score(raw_data)

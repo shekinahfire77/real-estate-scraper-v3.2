@@ -34,7 +34,7 @@ database:
   
   # SQLite settings
   sqlite:
-    path: data/real_estate.db
+    path: data/real_estate_enhanced.db
     
   # PostgreSQL settings (if type is postgresql)
   postgresql:
