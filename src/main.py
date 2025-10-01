@@ -18,7 +18,7 @@ from .config import (
     QUALITY_THRESHOLDS
 )
 from .models import RealEstateProperty, ScrapingResult, QualityReport
-from .extractors import DataExtractor
+from .extractors_enhanced import RedfinEnhancedExtractor
 from .validators import DataValidator
 from .scrapers import BeautifulSoupScraper, AsyncScraper
 
@@ -101,19 +101,17 @@ class RealEstateScraperV3:
     
     def process_url(self, url: str, html: Optional[str]) -> Optional[Dict[str, Any]]:
         """Process a single URL's HTML content"""
-        
+
         if not html:
             self.failed_scrapes += 1
             self.failed_urls.append(url)
             return None
-        
-        # Extract data
-        domain = self.sync_scraper.get_domain(url)
-        extractor = DataExtractor(domain)
-        raw_data = extractor.extract_property_data(html)
-        
-        # Add URL to data
-        raw_data['url'] = url
+
+        # Extract data using enhanced extractor
+        extractor = RedfinEnhancedExtractor()
+        raw_data = extractor.extract_property_data(html, url)
+
+        # URL already added by enhanced extractor
         
         # Validate and score
         validated_data = self.validator.validate_and_score(raw_data)

@@ -31,13 +31,19 @@ class Property(Base):
     bedrooms = Column(Integer)
     bathrooms = Column(Float)
     square_footage = Column(Integer)
-    
+
     # Additional fields
     page_type = Column(String(50))
+    property_type = Column(String(100))  # e.g., Single Family, Condo, Townhouse
     property_description = Column(Text)
     photos = Column(Text)  # JSON array of photo URLs
     days_on_market = Column(Integer)
     property_history = Column(Text)
+    year_built = Column(Integer)
+    lot_size = Column(String(100))
+    price_per_sqft = Column(Float)
+    schools = Column(Text)  # JSON array of nearby schools
+    hoa_fee = Column(Float)
     
     # Rental-specific
     monthly_rent = Column(Float)

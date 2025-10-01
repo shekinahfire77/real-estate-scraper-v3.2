@@ -42,7 +42,7 @@ class DatabaseConnection:
             self.connection_string = connection_string
         elif db_type == 'sqlite':
             if not db_path:
-                db_path = str(DATA_DIR / 'real_estate.db')
+                db_path = str(DATA_DIR / 'real_estate_enhanced.db')
             self.connection_string = f'sqlite:///{db_path}'
         elif db_type == 'postgresql':
             # Get from environment variables

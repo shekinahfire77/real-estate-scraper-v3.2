@@ -75,7 +75,7 @@ class ConfigManager:
             'database': {
                 'type': 'sqlite',
                 'sqlite': {
-                    'path': 'data/real_estate.db'
+                    'path': 'data/real_estate_enhanced.db'
                 },
                 'postgresql': {
                     'host': 'localhost',
