@@ -6,7 +6,7 @@ import random
 from typing import Optional, Callable, Any, Dict
 from datetime import datetime, timedelta
 from functools import wraps
-from collections import defaultdict
+from collections import defaultdict, deque
 from enum import Enum
 
 logger = logging.getLogger(__name__)
