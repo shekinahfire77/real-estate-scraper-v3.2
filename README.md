@@ -137,6 +137,45 @@ A JSON report is generated with statistics:
 }
 ```
 
+### Quality Scoring System
+
+The scraper assigns a quality score (0-100) to each scraped property based on data completeness:
+
+**Score Breakdown:**
+- **Required Fields (40 points):** price, address, bedrooms, bathrooms
+  - Each field worth 10 points
+  - Missing required fields significantly impact quality
+
+- **Important Fields (30 points):** square_footage, listing_id, property_description
+  - Sqft: 15 points
+  - Listing ID: 10 points
+  - Description: 5 points
+
+- **Enhanced Fields (30 points):** photos, property_type, amenities, etc.
+  - Photos/images: 10 points
+  - Property type: 5 points
+  - Additional data: 15 points
+
+**Quality Tiers:**
+- **90-100 (Excellent):** Complete data with all fields populated
+- **70-89 (Good):** Most important fields present, some optional fields missing
+- **50-69 (Fair):** Required fields + some additional data
+- **Below 50 (Poor):** Missing required fields or very incomplete
+
+**Filtering:**
+- Default threshold: 50 (configurable with `--threshold` flag)
+- Records below threshold are excluded from output
+- Adjust based on your data quality needs
+
+**Example:**
+```bash
+# Only save high-quality listings
+python -m src.main --threshold 80 --input urls.csv
+
+# Accept all listings with basic data
+python -m src.main --threshold 30 --input urls.csv
+```
+
 ## Performance
 
 ### Async Mode (Default)
