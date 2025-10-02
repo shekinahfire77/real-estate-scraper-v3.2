@@ -19,7 +19,7 @@ A modular, production-grade web scraper for real estate data with database suppo
 ```bash
 # Clone the repository
 git clone https://github.com/shekinahfire77/real-estate-scraper-v3.git
-cd real-estate-scraper-v3
+cd real-estate-scraper-v3.2
 
 # Install dependencies
 pip install -r requirements.txt
