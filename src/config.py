@@ -65,6 +65,24 @@ SITE_CONCURRENCY_SETTINGS: Dict[str, Dict] = {
         'max_retries': 2,
         'max_concurrent': 1
     },
+    'loopnet.com': {
+        'delay_between_requests': (8, 15),  # Very slow - strong bot protection
+        'requests_per_minute': 4,            # Only 4 requests per minute
+        'max_retries': 3,
+        'max_concurrent': 1,                 # No concurrent requests
+        'timeout': 60,                       # Longer timeout for slow responses
+        'use_botasaurus': True,              # Use Botasaurus stealth browser
+        'wait_for_selector': 'h1'            # Wait for page title to load
+    },
+    'land.com': {
+        'delay_between_requests': (2, 4),    # Moderate rate limiting
+        'requests_per_minute': 20,           # 20 requests per minute
+        'max_retries': 3,
+        'max_concurrent': 1,                 # Limited concurrent for stealth
+        'timeout': 30,
+        'use_botasaurus': True,              # Use Botasaurus stealth browser
+        'wait_for_selector': 'h1'            # Wait for property title
+    },
     'default': {
         'delay_between_requests': (2, 4),
         'requests_per_minute': 15,

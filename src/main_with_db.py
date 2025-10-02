@@ -16,17 +16,26 @@ from datetime import datetime
 
 from .config import (
     DATA_DIR, LOGS_DIR, CSV_HEADERS,
-    QUALITY_THRESHOLDS
+    QUALITY_THRESHOLDS, SITE_CONCURRENCY_SETTINGS
 )
 from .models import RealEstateProperty, ScrapingResult, QualityReport
 from .extractors import get_extractor_for_url, get_supported_sites
 from .validators import DataValidator
 from .scrapers import BeautifulSoupScraper, AsyncScraper
+from .scrapers.playwright_scraper import PlaywrightScraper
 from .scrapers.retry_handler import (
     DomainCircuitBreaker,
     AdaptiveRateLimiter,
     retry_with_backoff
 )
+
+# Try to import Botasaurus (stealth browser)
+try:
+    from .scrapers.botasaurus_scraper import BotasaurusScraper
+    BOTASAURUS_AVAILABLE = True
+except ImportError:
+    BOTASAURUS_AVAILABLE = False
+    logging.getLogger(__name__).warning("Botasaurus not available - stealth scraping will use standard Playwright")
 from .database.connection import DatabaseConnection
 from .database.crud import PropertyCRUD, ScrapeJobCRUD, FailedUrlCRUD
 
@@ -264,47 +273,95 @@ class RealEstateScraperWithDB:
     async def scrape_async_with_db(self, urls: List[str]) -> None:
         """Enhanced async scraping with database support"""
 
-        async with AsyncScraper(self.concurrent_limit) as scraper:
-            batch_size: int = self.concurrent_limit * 2
-            
-            for i in range(0, len(urls), batch_size):
-                batch = urls[i:i + batch_size]
-                logger.info(f"Processing batch {i//batch_size + 1} ({len(batch)} URLs)")
-                
-                # Create tasks with circuit breaker
-                tasks = [
-                    self.scrape_with_circuit_breaker(scraper, url)
-                    for url in batch
-                ]
-                
-                results = await asyncio.gather(*tasks, return_exceptions=True)
-                
-                for url, result in zip(batch, results):
-                    if isinstance(result, Exception):
-                        logger.error(f"Exception for {url}: {result}")
-                        self.failed_scrapes += 1
-                        continue
-                    
-                    # Process the result
-                    try:
-                        data = self.process_url_with_retry(url, result)
-                        
-                        if data:
-                            quality_score = data.get('quality_score', 0)
-                            
-                            if quality_score >= self.quality_threshold:
-                                data['scrape_method'] = 'AsyncScraper'
-                                self.scraped_data.append(data)
-                                self.successful_scrapes += 1
-                                
-                                # Save to database
-                                self.save_to_database(data)
-                            else:
-                                logger.warning(f"Quality too low for {url}: {quality_score}")
-                                self.failed_scrapes += 1
-                    except Exception as e:
-                        logger.error(f"Failed to process {url}: {e}")
-                        self.failed_scrapes += 1
+        # Separate URLs by scraper type
+        botright_urls = []
+        playwright_urls = []
+        regular_urls = []
+
+        for url in urls:
+            from urllib.parse import urlparse
+            domain = urlparse(url).netloc.lower()
+
+            # Try domain with and without www
+            settings = SITE_CONCURRENCY_SETTINGS.get(domain)
+            if not settings and domain.startswith('www.'):
+                settings = SITE_CONCURRENCY_SETTINGS.get(domain[4:])
+            if not settings:
+                settings = SITE_CONCURRENCY_SETTINGS['default']
+
+            # Check if site requires stealth scraping
+            if settings.get('use_botasaurus', False):
+                botright_urls.append(url)  # Reuse botright_urls list for botasaurus
+            elif settings.get('use_playwright', False):
+                playwright_urls.append(url)
+            else:
+                regular_urls.append(url)
+
+        # Process regular URLs with AsyncScraper
+        if regular_urls:
+            logger.info(f"Processing {len(regular_urls)} URLs with AsyncScraper")
+            async with AsyncScraper(self.concurrent_limit) as scraper:
+                await self._process_batch(scraper, regular_urls, 'AsyncScraper')
+
+        # Process Playwright URLs with PlaywrightScraper
+        if playwright_urls:
+            logger.info(f"Processing {len(playwright_urls)} URLs with PlaywrightScraper")
+            async with PlaywrightScraper(concurrent_limit=1) as scraper:
+                await self._process_batch(scraper, playwright_urls, 'PlaywrightScraper')
+
+        # Process Botasaurus URLs with BotasaurusScraper (stealth mode)
+        if botright_urls:  # Still named botright_urls but contains botasaurus URLs
+            if BOTASAURUS_AVAILABLE:
+                logger.info(f"Processing {len(botright_urls)} URLs with BotasaurusScraper (stealth)")
+                scraper = BotasaurusScraper(max_concurrent=1)
+                await self._process_batch(scraper, botright_urls, 'BotasaurusScraper')
+            else:
+                logger.warning("Botasaurus not available - falling back to PlaywrightScraper")
+                async with PlaywrightScraper(concurrent_limit=1) as scraper:
+                    await self._process_batch(scraper, botright_urls, 'PlaywrightScraper')
+
+    async def _process_batch(self, scraper, urls: List[str], scraper_name: str) -> None:
+        """Process a batch of URLs with a given scraper"""
+        batch_size: int = self.concurrent_limit * 2
+
+        for i in range(0, len(urls), batch_size):
+            batch = urls[i:i + batch_size]
+            logger.info(f"Processing batch {i//batch_size + 1} ({len(batch)} URLs)")
+
+            # Create tasks with circuit breaker
+            tasks = [
+                self.scrape_with_circuit_breaker(scraper, url)
+                for url in batch
+            ]
+
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+
+            for url, result in zip(batch, results):
+                if isinstance(result, Exception):
+                    logger.error(f"Exception for {url}: {result}")
+                    self.failed_scrapes += 1
+                    continue
+
+                # Process the result
+                try:
+                    data = self.process_url_with_retry(url, result)
+
+                    if data:
+                        quality_score = data.get('quality_score', 0)
+
+                        if quality_score >= self.quality_threshold:
+                            data['scrape_method'] = scraper_name
+                            self.scraped_data.append(data)
+                            self.successful_scrapes += 1
+
+                            # Save to database
+                            self.save_to_database(data)
+                        else:
+                            logger.warning(f"Quality too low for {url}: {quality_score}")
+                            self.failed_scrapes += 1
+                except Exception as e:
+                    logger.error(f"Failed to process {url}: {e}")
+                    self.failed_scrapes += 1
     
     def run(self, limit: Optional[int] = None) -> None:
         """Main execution with database support"""
