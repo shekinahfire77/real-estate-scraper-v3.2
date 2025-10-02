@@ -11,7 +11,7 @@ import logging
 import asyncio
 import uuid
 from pathlib import Path
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Tuple, Union
 from datetime import datetime
 
 from .config import (
@@ -19,7 +19,7 @@ from .config import (
     QUALITY_THRESHOLDS
 )
 from .models import RealEstateProperty, ScrapingResult, QualityReport
-from .extractors_enhanced import RedfinEnhancedExtractor
+from .extractors import get_extractor_for_url, get_supported_sites
 from .validators import DataValidator
 from .scrapers import BeautifulSoupScraper, AsyncScraper
 from .scrapers.retry_handler import (
@@ -71,8 +71,11 @@ class RealEstateScraperWithDB:
         """
         
         self.input_csv = Path(input_csv)
-        self.output_csv = DATA_DIR / output_csv
-        self.quality_report_file = DATA_DIR / quality_report
+        # Strip 'data/' prefix if present to avoid double-nesting
+        output_csv_clean = output_csv.replace('data/', '').replace('data\\', '') if isinstance(output_csv, str) else output_csv
+        quality_report_clean = quality_report.replace('data/', '').replace('data\\', '') if isinstance(quality_report, str) else quality_report
+        self.output_csv = DATA_DIR / output_csv_clean
+        self.quality_report_file = DATA_DIR / quality_report_clean
         self.use_async = use_async
         self.concurrent_limit = concurrent_limit
         self.quality_threshold = quality_threshold
@@ -99,17 +102,17 @@ class RealEstateScraperWithDB:
             self.job_id = str(uuid.uuid4())
         
         # Statistics
-        self.successful_scrapes = 0
-        self.failed_scrapes = 0
-        self.scraped_data = []
-        self.failed_urls = []
-        self.validation_failures = []
-        self.response_times = []
+        self.successful_scrapes: int = 0
+        self.failed_scrapes: int = 0
+        self.scraped_data: List[Dict[str, Any]] = []
+        self.failed_urls: List[str] = []
+        self.validation_failures: List[Dict[str, Any]] = []
+        self.response_times: List[float] = []
     
     def read_urls(self) -> List[str]:
         """Read URLs from CSV or database"""
-        
-        urls = []
+
+        urls: List[str] = []
         
         # Try to get URLs needing update from database
         if self.use_database:
@@ -150,8 +153,11 @@ class RealEstateScraperWithDB:
         if not html:
             raise Exception("No HTML content")
 
-        # Extract data using enhanced extractor
-        extractor = RedfinEnhancedExtractor()
+        # Get appropriate extractor based on URL domain
+        extractor = get_extractor_for_url(url, use_cache=True)
+        logger.debug(f"Using {extractor.__class__.__name__} for {url}")
+        
+        # Extract data
         raw_data = extractor.extract_property_data(html, url)
 
         # URL already added by enhanced extractor
@@ -164,9 +170,9 @@ class RealEstateScraperWithDB:
         
         return validated_data
     
-    def save_to_database(self, property_data: Dict[str, Any]):
+    def save_to_database(self, property_data: Dict[str, Any]) -> None:
         """Save property to database"""
-        
+
         if not self.use_database:
             return
         
@@ -255,11 +261,11 @@ class RealEstateScraperWithDB:
             logger.error(f"Failed to scrape {url}: {e}")
             return None
     
-    async def scrape_async_with_db(self, urls: List[str]):
+    async def scrape_async_with_db(self, urls: List[str]) -> None:
         """Enhanced async scraping with database support"""
-        
+
         async with AsyncScraper(self.concurrent_limit) as scraper:
-            batch_size = self.concurrent_limit * 2
+            batch_size: int = self.concurrent_limit * 2
             
             for i in range(0, len(urls), batch_size):
                 batch = urls[i:i + batch_size]
@@ -300,12 +306,20 @@ class RealEstateScraperWithDB:
                         logger.error(f"Failed to process {url}: {e}")
                         self.failed_scrapes += 1
     
-    def run(self, limit: Optional[int] = None):
+    def run(self, limit: Optional[int] = None) -> None:
         """Main execution with database support"""
-        
-        print(f"\n{'='*70}")
-        print("REAL ESTATE SCRAPER V3.2 - Database Edition")
-        print(f"{'='*70}")
+
+        logger.info("="*70)
+        logger.info("REAL ESTATE SCRAPER V3.2 - Database Edition")
+        logger.info("="*70)
+
+        # Show supported sites
+        supported_sites = get_supported_sites()
+        if supported_sites:
+            logger.info("Supported Sites:")
+            for domain, extractor_name in supported_sites.items():
+                logger.info(f"  - {domain}: {extractor_name}")
+        logger.info("="*70)
         
         # Create job in database
         if self.use_database:
@@ -334,11 +348,11 @@ class RealEstateScraperWithDB:
         if limit:
             urls = urls[:limit]
         
-        print(f"Total URLs to scrape: {len(urls)}")
-        print(f"Database enabled: {self.use_database}")
-        print(f"Circuit breaker enabled: True")
-        print(f"Adaptive rate limiting: True")
-        print(f"{'='*70}\n")
+        logger.info(f"Total URLs to scrape: {len(urls)}")
+        logger.info(f"Database enabled: {self.use_database}")
+        logger.info(f"Circuit breaker enabled: True")
+        logger.info(f"Adaptive rate limiting: True")
+        logger.info("="*70)
         
         # Update job status
         if self.use_database:
@@ -381,47 +395,47 @@ class RealEstateScraperWithDB:
         if self.use_database:
             self.print_database_stats()
         
-        print(f"\nTotal execution time: {total_time:.2f} seconds")
-        print(f"Average time per URL: {total_time/len(urls):.2f} seconds")
+        logger.info(f"Total execution time: {total_time:.2f} seconds")
+        logger.info(f"Average time per URL: {total_time/len(urls):.2f} seconds")
     
-    def print_database_stats(self):
+    def print_database_stats(self) -> None:
         """Print database statistics"""
         
         if not self.use_database:
             return
         
-        print(f"\n{'='*70}")
-        print("DATABASE STATISTICS")
-        print(f"{'='*70}")
-        
+        logger.info("="*70)
+        logger.info("DATABASE STATISTICS")
+        logger.info("="*70)
+
         with self.db.get_session() as session:
             property_crud = PropertyCRUD(session)
             stats = property_crud.get_statistics()
-            
-            print(f"Total Properties: {stats['total_properties']}")
-            print(f"Average Price: ${stats['avg_price']:,.0f}" if stats['avg_price'] else "N/A")
-            print(f"Average Quality Score: {stats['avg_quality_score']:.1f}" if stats['avg_quality_score'] else "N/A")
-            
-            print("\nProperties by Bedrooms:")
+
+            logger.info(f"Total Properties: {stats['total_properties']}")
+            logger.info(f"Average Price: ${stats['avg_price']:,.0f}" if stats['avg_price'] else "N/A")
+            logger.info(f"Average Quality Score: {stats['avg_quality_score']:.1f}" if stats['avg_quality_score'] else "N/A")
+
+            logger.info("Properties by Bedrooms:")
             for beds, count in sorted(stats['properties_by_bedrooms'].items()):
-                print(f"  {beds} bed: {count}")
-            
-            print("\nQuality Distribution:")
+                logger.info(f"  {beds} bed: {count}")
+
+            logger.info("Quality Distribution:")
             for category, count in stats['properties_by_quality'].items():
-                print(f"  {category}: {count}")
-        
+                logger.info(f"  {category}: {count}")
+
         # Circuit breaker stats
         cb_stats = self.circuit_breaker.get_stats()
         if cb_stats:
-            print("\nCircuit Breaker Status:")
+            logger.info("Circuit Breaker Status:")
             for domain, status in cb_stats.items():
-                print(f"  {domain}: {status['state']} (failures: {status['failure_count']})")
-        
-        print(f"{'='*70}\n")
+                logger.info(f"  {domain}: {status['state']} (failures: {status['failure_count']})")
+
+        logger.info("="*70)
     
-    def save_to_csv(self):
+    def save_to_csv(self) -> None:
         """Save to CSV (inherited from parent)"""
-        
+
         if not self.scraped_data:
             logger.warning("No data to save")
             return
@@ -436,16 +450,16 @@ class RealEstateScraperWithDB:
         except Exception as e:
             logger.error(f"Failed to save CSV: {e}")
     
-    def generate_quality_report(self):
+    def generate_quality_report(self) -> None:
         """Generate quality report (inherited)"""
-        
+
         if not self.scraped_data:
             return
         
-        quality_scores = [d.get('quality_score', 0) for d in self.scraped_data]
-        avg_quality = sum(quality_scores) / len(quality_scores) if quality_scores else 0
-        
-        report_data = {
+        quality_scores: List[int] = [d.get('quality_score', 0) for d in self.scraped_data]
+        avg_quality: float = sum(quality_scores) / len(quality_scores) if quality_scores else 0.0
+
+        report_data: Dict[str, Any] = {
             'job_id': self.job_id,
             'total_records': len(self.scraped_data),
             'successful_scrapes': self.successful_scrapes,
@@ -473,9 +487,9 @@ class RealEstateScraperWithDB:
             logger.error(f"Failed to save quality report: {e}")
 
 
-def main():
+def main() -> None:
     """Enhanced command-line entry point"""
-    
+
     import argparse
     
     parser = argparse.ArgumentParser(description='Real Estate Web Scraper V3.2 with Database')
@@ -502,9 +516,32 @@ def main():
                        help='Database type')
     parser.add_argument('--db-path', default=None,
                        help='Database path for SQLite')
-    
+    parser.add_argument('--new-db', action='store_true', default=False,
+                       help='Create new database with timestamp for each run (default: False, reuses existing db)')
+
+    # New feature flags
+    parser.add_argument('--proxy', action='store_true', default=False,
+                       help='Enable proxy rotation (requires proxies in config.yaml)')
+    parser.add_argument('--crawl', action='store_true', default=False,
+                       help='Enable crawling mode for search result pages')
+    parser.add_argument('--format', default='csv',
+                       choices=['csv', 'json', 'excel', 'parquet'],
+                       help='Output format (default: csv)')
+    parser.add_argument('--batch-size', type=int, default=None,
+                       help='Batch size for processing (default: 2 * concurrent_limit)')
+    parser.add_argument('--workers', type=int, default=4,
+                       help='Number of processing workers (default: 4)')
+
     args = parser.parse_args()
-    
+
+    # Handle database path generation
+    db_path = args.db_path
+    if args.db and args.new_db and not args.db_path:
+        # Generate timestamped database name
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        db_path = str(DATA_DIR / f'scraper_{timestamp}.db')
+        logger.info(f"Creating new database: {db_path}")
+
     # Create scraper instance
     scraper = RealEstateScraperWithDB(
         input_csv=args.input,
@@ -514,7 +551,7 @@ def main():
         quality_threshold=args.threshold,
         use_database=args.db,
         db_type=args.db_type,
-        db_path=args.db_path
+        db_path=db_path
     )
     
     # Run scraper
